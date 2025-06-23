@@ -29,12 +29,14 @@ jobs:
 
     - name: Create wrangler.toml
       run: |
-        echo 'name = "vless-auto"
-type = "javascript"
-account_id = "${{ secrets.CF_ACCOUNT_ID }}"
-workers_dev = true
-main = "index.js"
-compatibility_date = "2024-04-16"' > wrangler.toml
+        cat > wrangler.toml <<EOF
+        name = "vless-auto"
+        type = "javascript"
+        account_id = "${{ secrets.CF_ACCOUNT_ID }}"
+        workers_dev = true
+        main = "index.js"
+        compatibility_date = "2024-04-16"
+        EOF
 
     - name: Publish Worker to Cloudflare
       run: wrangler publish
