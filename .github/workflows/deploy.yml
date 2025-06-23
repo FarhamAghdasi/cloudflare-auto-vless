@@ -1,0 +1,50 @@
+name: Deploy VLESS Worker
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Install Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18
+
+    - name: Install Wrangler
+      run: npm install -g wrangler
+
+    - name: Generate UUID
+      id: uuid
+      run: echo "uuid=$(uuidgen)" >> $GITHUB_OUTPUT
+
+    - name: Prepare Worker with UUID
+      run: |
+        sed "s/__UUID__/${{ steps.uuid.outputs.uuid }}/g" worker-template.js > index.js
+
+    - name: Create wrangler.toml
+      run: |
+        echo 'name = "vless-auto"
+type = "javascript"
+account_id = "${{ secrets.CF_ACCOUNT_ID }}"
+workers_dev = true
+main = "index.js"
+compatibility_date = "2024-04-16"' > wrangler.toml
+
+    - name: Publish Worker to Cloudflare
+      run: wrangler publish
+      env:
+        CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+    - name: Show Final VLESS Link
+      run: |
+        HOST="${{ secrets.CF_WORKER_SUBDOMAIN }}.workers.dev"
+        UUID="${{ steps.uuid.outputs.uuid }}"
+        VLESS="vless://${UUID}@${HOST}:443?encryption=none&security=tls&sni=${HOST}&fp=randomized&type=ws&host=${HOST}&path=%2F%3Fed%3D2048#${HOST}"
+        echo -e "\n✅ Your VLESS Config:\n$VLESS\n"
+        echo $VLESS > vless-link.txt
